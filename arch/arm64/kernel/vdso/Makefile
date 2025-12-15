@@ -4,6 +4,7 @@
 # Author: Will Deacon <will.deacon@arm.com>
 # Heavily based on the vDSO Makefiles for other archs.
 #
+VDSO_LDFLAGS := -melf64_littleaarch64
 
 obj-vdso := gettimeofday.o note.o sigreturn.o
 
@@ -55,7 +56,7 @@ $(obj-vdso): %.o: %.S FORCE
 
 # Actual build commands
 quiet_cmd_vdsold = VDSOL   $@
-      cmd_vdsold = $(CROSS_COMPILE)ld -maarch64linux -shared -soname=linux-vdso.so.1 -T $^ -o $@
+      cmd_vdsold = $(CROSS_COMPILE)ld $(VDSO_LDFLAGS) -shared -soname=linux-vdso.so.1 -T $^ -o $@
 quiet_cmd_vdsoas = VDSOA   $@
       cmd_vdsoas = $(CC) $(a_flags) -c -o $@ $<
 
