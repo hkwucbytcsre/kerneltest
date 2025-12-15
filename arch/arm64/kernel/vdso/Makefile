@@ -4,6 +4,7 @@
 # Author: Will Deacon <will.deacon@arm.com>
 # Heavily based on the vDSO Makefiles for other archs.
 #
+CROSS_COMPILE=aarch64-linux-gnu-
 
 obj-vdso := gettimeofday.o note.o sigreturn.o
 
