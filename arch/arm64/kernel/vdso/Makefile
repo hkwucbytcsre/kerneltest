@@ -59,13 +59,7 @@ $(obj-vdso): %.o: %.S FORCE
 
 # Actual build commands
 quiet_cmd_vdsold_and_vdso_check = LD      $@
-      cmd_vdsold_and_vdso_check = $(cmd_ld); $(cmd_vdso_check)
-
-# 同时需要添加 cmd_ld 和 cmd_vdso_check 的定义
-quiet_cmd_ld = LD      $@
-      cmd_ld = $(LD) $(ldflags-y) $(VDSO_LDFLAGS) $(target_ldflags) -T $^ -o $@.tmp
-quiet_cmd_vdso_check = VDSOCHK $@
-      cmd_vdso_check = $(cmd_vdso_check_postprocess)
+      cmd_vdsold_and_vdso_check = $(LD) $(ldflags-y) $(VDSO_LDFLAGS) -T $^ -o $@
 
 quiet_cmd_vdsoas = VDSOA   $@
       cmd_vdsoas = $(CC) $(a_flags) -c -o $@ $<
