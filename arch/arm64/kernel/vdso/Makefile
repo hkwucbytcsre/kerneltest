@@ -4,17 +4,34 @@
 # Author: Will Deacon <will.deacon@arm.com>
 # Heavily based on the vDSO Makefiles for other archs.
 #
-VDSO_LDFLAGS := -aarch64linux
 
 obj-vdso := gettimeofday.o note.o sigreturn.o
+
+CFLAGS_REMOVE_vgettimeofday.o = $(CC_FLAGS_FTRACE) -Os $(CC_FLAGS_SCS)
+CFLAGS_vgettimeofday.o = -O2 -mcmodel=tiny -fasynchronous-unwind-tables
+
+ifneq ($(c-gettimeofday-y),)
+  CFLAGS_vgettimeofday.o += -include $(c-gettimeofday-y)
+endif
+
+# Clang versions less than 8 do not support -mcmodel=tiny
+ifeq ($(CONFIG_CC_IS_CLANG), y)
+  ifeq ($(shell test $(CONFIG_CLANG_VERSION) -lt 80000; echo $$?),0)
+    CFLAGS_REMOVE_vgettimeofday.o += -mcmodel=tiny
+  endif
+endif
 
 # Build rules
 targets := $(obj-vdso) vdso.so vdso.so.dbg
 obj-vdso := $(addprefix $(obj)/, $(obj-vdso))
 
-ccflags-y := -shared -fno-common -fno-builtin
-ccflags-y += -nostdlib -Wl,-soname=linux-vdso.so.1 \
-		$(call cc-ldoption, -Wl$(comma)--hash-style=sysv)
+ldflags-y := -shared -nostdlib -soname=linux-vdso.so.1 --hash-style=sysv \
+		--build-id -n
+
+VDSO_LDFLAGS := -Bsymbolic
+
+ccflags-y := -fno-common -fno-builtin -fno-stack-protector -ffixed-x18
+ccflags-y += -DDISABLE_BRANCH_PROFILING
 ccflags-y += $(DISABLE_LTO)
 
 # Disable gcov profiling for VDSO code
@@ -33,7 +50,7 @@ $(obj)/vdso.o : $(obj)/vdso.so
 
 # Link rule for the .so file, .lds has to be first
 $(obj)/vdso.so.dbg: $(src)/vdso.lds $(obj-vdso)
-	$(call if_changed,vdsold)
+	$(call if_changed,vdsold_and_vdso_check)
 
 # Strip rule for the .so file
 $(obj)/%.so: OBJCOPYFLAGS := -S
@@ -55,8 +72,15 @@ $(obj-vdso): %.o: %.S FORCE
 	$(call if_changed_dep,vdsoas)
 
 # Actual build commands
-quiet_cmd_vdsold = VDSOL   $@
-      cmd_vdsold = $(CROSS_COMPILE)ld $(VDSO_LDFLAGS) -shared -soname=linux-vdso.so.1 -T $^ -o $@
+quiet_cmd_vdsold_and_vdso_check = LD      $@
+      cmd_vdsold_and_vdso_check = $(cmd_ld); $(cmd_vdso_check)
+
+# 同时需要添加 cmd_ld 和 cmd_vdso_check 的定义
+quiet_cmd_ld = LD      $@
+      cmd_ld = $(LD) $(ldflags-y) $(VDSO_LDFLAGS) $(target_ldflags) -T $^ -o $@.tmp
+quiet_cmd_vdso_check = VDSOCHK $@
+      cmd_vdso_check = $(cmd_vdso_check_postprocess)
+
 quiet_cmd_vdsoas = VDSOA   $@
       cmd_vdsoas = $(CC) $(a_flags) -c -o $@ $<
 
