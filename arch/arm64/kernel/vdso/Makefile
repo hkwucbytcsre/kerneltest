@@ -4,7 +4,7 @@
 # Author: Will Deacon <will.deacon@arm.com>
 # Heavily based on the vDSO Makefiles for other archs.
 #
-VDSO_LDFLAGS := -melf64_littleaarch64
+VDSO_LDFLAGS := -aarch64linux
 
 obj-vdso := gettimeofday.o note.o sigreturn.o
 
